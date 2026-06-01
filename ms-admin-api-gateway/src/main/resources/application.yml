@@ -1,0 +1,26 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: ms-gestion-instructor
+          uri: lb://ms-gestion-instructor
+          predicates:
+            - Path=/api/instructores/**
+        - id: ms-gestion-alumno
+          uri: lb://ms-gestion-alumno
+          predicates:
+            - Path=/api/alumnos/**
+        - id: ms-gestion-taller
+          uri: lb://ms-gestion-taller
+          predicates:
+            - Path=/api/talleres/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
