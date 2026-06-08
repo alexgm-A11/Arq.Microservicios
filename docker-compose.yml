@@ -45,13 +45,13 @@ services:
     container_name: config-server
     ports:
       - "8888:8888"
+    volumes:
+      - C:/Users/alexg/Documents/config-repo:/config-repo
+    environment:
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:///config-repo
+      SPRING_PROFILES_ACTIVE: native
     networks:
       - microservicios-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
 
   eureka-server:
     build: ./ms-admin-registry-server
@@ -59,12 +59,12 @@ services:
     ports:
       - "8761:8761"
     depends_on:
-      config-server:
-        condition: service_healthy
+      - config-server
     networks:
       - microservicios-network
     environment:
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_INSTANCE_HOSTNAME: eureka-server
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
 
   api-gateway:
     build: ./ms-admin-api-gateway
@@ -72,30 +72,27 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      eureka-server:
-        condition: service_healthy
+      - eureka-server
     networks:
       - microservicios-network
     environment:
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED: true
+      SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_LOWER_CASE_SERVICE_ID: false
 
-  # ==================== MICROSERVICIOS ====================
   instructor-service:
     build: ./ms-gestion-instructor
     container_name: instructor-service
     ports:
       - "8081:8081"
     depends_on:
-      eureka-server:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
+      - eureka-server
+      - postgres
     networks:
       - microservicios-network
     environment:
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: instructor-service
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/microservicios_db
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: admin123
@@ -106,15 +103,13 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      eureka-server:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
+      - eureka-server
+      - postgres
     networks:
       - microservicios-network
     environment:
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: alumno-service
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/microservicios_db
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: admin123
@@ -125,19 +120,15 @@ services:
     ports:
       - "8083:8083"
     depends_on:
-      eureka-server:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      instructor-service:
-        condition: service_started
-      alumno-service:
-        condition: service_started
+      - eureka-server
+      - postgres
+      - instructor-service
+      - alumno-service
     networks:
       - microservicios-network
     environment:
-      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: taller-service
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/microservicios_db
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: admin123
